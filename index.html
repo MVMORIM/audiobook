@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ReadEra Pro — Leitor & Audiobook</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+
+<style>
+/* ===== TEMA (paleta quente, olhos sensíveis) ===== */
+:root {
+  --bg: #fdf8f0;
+  --surface: #fffaf5;
+  --paper: #fdf8f0;
+  --border: rgba(0, 0, 0, 0.06);
+  --primary: #c17b4a;
+  --primary-dark: #a8643a;
+  --primary-light: #fef3e8;
+  --primary-gradient: linear-gradient(135deg, #c17b4a 0%, #d4925d 100%);
+  --text: #3d2a1c;
+  --text-soft: #8b7355;
+  --text-muted: #b8a28a;
+  --radius-md: 16px;
+  --shadow-lg: 0 20px 35px -12px rgba(0, 0, 0, 0.12);
+  --shadow-primary: 0 8px 20px rgba(193, 123, 74, 0.2);
+  --highlight: rgba(193, 123, 74, 0.3);
+  --highlight-active: rgba(193, 123, 74, 0.5);
+}
+
+body.dark {
+  --bg: #1a1410;
+  --surface: #261f1a;
+  --paper: #2a241e;
+  --border: rgba(255, 255, 255, 0.06);
+  --primary-light: #3d2a1c;
+  --text: #f0e6d8;
+  --text-soft: #b8a28a;
+  --text-muted: #6b5a4a;
+  --highlight: rgba(212, 163, 69, 0.3);
+  --highlight-active: rgba(212, 163, 69, 0.5);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  transition: background 0.3s ease;
+}
+
+/* TOPBAR */
+.topbar {
+  background: var(--surface);
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  border-bottom: 1px solid var(--border);
+}
+.topbar-logo {
+  font-size: 1.3rem;
+  font-weight: 800;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.topbar-nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nav-tab {
+  padding: 8px 14px;
+  border-radius: 30px;
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+.nav-tab.active { background: var(--primary-gradient); color: white; box-shadow: var(--shadow-primary); }
+.dark-toggle {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.25s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.inner { max-width: 800px; margin: 0 auto; padding: 20px 16px; }
+
+.page-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.page-title small {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+
+/* BUTTONS */
+.btn-del { background: none; border: none; cursor: pointer; opacity: 0.6; font-size: 1.1rem; }
+
+/* SEARCH */
+.search-wrap { position: relative; margin-bottom: 20px; }
+.search-wrap input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  border: 1.5px solid var(--border);
+  border-radius: 60px;
+  font-size: 16px;
+  background: var(--surface);
+  color: var(--text);
+}
+.search-icon { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-soft); }
+
+/* LIBRARY CARDS */
+.lib-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lib-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+.lib-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.lib-card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: var(--primary); }
+.badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  background: var(--primary-light);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.book-progress { margin-top: 12px; }
+.progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s; }
+.book-meta { margin-top: 8px; font-size: 0.7rem; color: var(--text-soft); }
+
+/* EMPTY STATE */
+.empty { text-align: center; padding: 60px 20px; color: var(--text-soft); }
+.empty-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
+
+/* ===== LEITOR COM ROLAGEM E DESTAQUE ===== */
+#reader-view {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+}
+
+.reader-header {
+  padding: 10px 16px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reader-title {
+  flex: 1;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-soft);
+  font-family: 'Inter', sans-serif;
+}
+.close-reader {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-soft);
+  padding: 4px 8px;
+}
+
+.reading-progress-bar {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--border);
+  z-index: 150;
+}
+.reading-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.reader-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  scroll-behavior: smooth;
+}
+
+.page-content-single {
+  max-width: 700px;
+  margin: 0 auto;
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 30px 35px;
+  font-family: 'Crimson Pro', 'Georgia', serif;
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+
+.page-content-single p { margin-bottom: 1.2em; text-indent: 1.5em; }
+.page-content-single p:first-of-type { text-indent: 0; }
+
+.current-highlight {
+  background-color: var(--highlight-active);
+  border-radius: 8px;
+  padding: 2px 4px;
+  transition: background-color 0.2s;
+  animation: pulse 0.3s ease;
+}
+@keyframes pulse {
+  0% { background-color: transparent; }
+  100% { background-color: var(--highlight-active); }
+}
+
+/* Indicador sutil de "carregando próxima página / continuando leitura" */
+.page-transition-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  padding: 6px 0 0;
+  opacity: 0.85;
+  font-family: 'Inter', sans-serif;
+}
+
+.reader-footer {
+  padding: 12px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  padding: 4px 12px;
+  border-radius: 40px;
+  border: 1px solid var(--border);
+}
+
+.control-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-gradient);
+  color: white;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+  font-family: 'Inter', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.control-btn:active { transform: scale(0.95); }
+.control-btn.small {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.scroll-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  padding: 4px 12px;
+  border-radius: 40px;
+  border: 1px solid var(--border);
+}
+.scroll-controls label { font-size: 0.65rem; font-family: 'Inter', sans-serif; color: var(--text-soft); }
+#scroll-speed { width: 80px; cursor: pointer; }
+#toggle-scroll {
+  width: auto;
+  padding: 0 10px;
+  border-radius: 30px;
+  font-size: 0.7rem;
+  background: var(--primary-gradient);
+  color: white;
+  height: 32px;
+}
+
+.tts-speed-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  padding: 4px 12px;
+  border-radius: 40px;
+  border: 1px solid var(--border);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  color: var(--text-soft);
+}
+#tts-speed { width: 70px; cursor: pointer; }
+#tts-speed-value { color: var(--primary); font-weight: 700; min-width: 28px; font-size: 0.7rem; }
+
+#page-info { font-family: 'Inter', sans-serif; font-size: 0.75rem; color: var(--text-soft); min-width: 55px; text-align: center; }
+#page-input {
+  width: 50px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+}
+
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary-gradient);
+  color: white;
+  font-size: 26px;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fab:active { transform: scale(0.95); }
+
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 40px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  z-index: 999;
+  transition: transform 0.3s;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 640px) {
+  .inner { padding: 16px 12px; }
+  .topbar { padding: 0 12px; height: 56px; }
+  .nav-tab { padding: 6px 10px; font-size: 0.7rem; }
+  .control-btn { width: 38px; height: 38px; font-size: 16px; }
+  .control-group { padding: 3px 10px; gap: 4px; }
+  .scroll-controls { padding: 3px 10px; gap: 6px; }
+  .tts-speed-controls { padding: 3px 10px; gap: 4px; }
+  #scroll-speed { width: 70px; }
+  #tts-speed { width: 60px; }
+  .reader-footer { gap: 8px; }
+  .page-content-single { padding: 20px 25px; font-size: 0.95rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">Read<span>Era</span> Pro</div>
+  <nav class="topbar-nav">
+    <button class="nav-tab active" onclick="showPage('library',this)">📚 Biblioteca</button>
+    <button class="nav-tab" onclick="showPage('reading',this)">📖 Lendo Agora</button>
+    <button class="nav-tab" onclick="showPage('favorites',this)">⭐ Favoritos</button>
+    <button class="dark-toggle" onclick="toggleDarkMode()">🌙</button>
+  </nav>
+</div>
+
+<!-- BIBLIOTECA -->
+<div id="page-library" class="page active">
+<div class="inner">
+  <div class="page-hdr">
+    <div class="page-title">Biblioteca<small>Seus livros importados</small></div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="lib-search" placeholder="Buscar livro...">
+  </div>
+  <div id="lib-list"></div>
+</div>
+</div>
+
+<!-- LENDO AGORA -->
+<div id="page-reading" class="page">
+<div class="inner">
+  <div class="page-hdr">
+    <div class="page-title">Lendo Agora<small>Continue de onde parou</small></div>
+  </div>
+  <div id="reading-list"></div>
+</div>
+</div>
+
+<!-- FAVORITOS -->
+<div id="page-favorites" class="page">
+<div class="inner">
+  <div class="page-hdr">
+    <div class="page-title">Favoritos<small>Seus livros preferidos</small></div>
+  </div>
+  <div id="favorites-list"></div>
+</div>
+</div>
+
+<!-- LEITOR -->
+<div id="reader-view">
+  <div class="reader-header">
+    <button class="close-reader" onclick="closeReader()">✕</button>
+    <div id="current-book-title" class="reader-title"></div>
+  </div>
+  <div class="reading-progress-bar"><div class="reading-progress-fill" id="reading-progress-fill"></div></div>
+  <div class="reader-scroll-container" id="scroll-container">
+    <div class="page-content-single" id="page-content"></div>
+    <div class="page-transition-hint" id="page-transition-hint" style="display:none;"></div>
+  </div>
+  <div class="reader-footer">
+    <div class="tts-speed-controls">
+      <span>🗣️</span>
+      <input type="range" id="tts-speed" min="0.5" max="2" step="0.1" value="0.85">
+      <span id="tts-speed-value">0.9×</span>
+    </div>
+
+    <div class="control-group">
+      <button class="control-btn small" onclick="changeSentenceDelta(-1)" title="Frase anterior">‹</button>
+      <button class="control-btn small" onclick="changePageDelta(-1)" title="Página anterior">❮</button>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <input type="number" id="page-input" min="1" value="1">
+        <span id="page-info">0 / 0</span>
+        <span id="paragraph-info" title="Frase atual">¶ 0 / 0</span>
+      </div>
+      <button class="control-btn small" onclick="changePageDelta(1)" title="Próxima página">❯</button>
+      <button class="control-btn small" onclick="changeSentenceDelta(1)" title="Próxima frase">›</button>
+    </div>
+
+    <button id="btn-play-pause" class="control-btn">▶</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="file-input" accept="application/pdf" style="display:none;" multiple>
+<button class="fab" id="fab-import">+</button>
+
+<script>
+// ==================== CONFIG ====================
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+const STORAGE_KEY = 'readera_books_v2';
+const PLAYER_STATE_KEY = 'readera_player_state';
+
+// ==================== STORAGE ====================
+let booksData = [];
+
+function saveBooks() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(booksData));
+    console.log('✅ Livros salvos:', booksData.length);
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      showToast('⚠️ Armazenamento cheio! Exclua livros para liberar espaço.');
+    } else {
+      showToast('❌ Erro ao salvar biblioteca');
+    }
+  }
+}
+
+function loadBooks() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    booksData = saved ? JSON.parse(saved) : [];
+    console.log('✅ Livros carregados:', booksData.length);
+  } catch (e) { booksData = []; }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+}
+
+// ==================== DARK MODE ====================
+function toggleDarkMode() {
+  document.body.classList.toggle('dark');
+  const btn = document.querySelector('.dark-toggle');
+  btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+}
+if (localStorage.getItem('darkMode') === 'true') {
+  document.body.classList.add('dark');
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('.dark-toggle');
+    if (btn) btn.textContent = '☀️';
+  });
+}
+
+// ==================== NAVEGAÇÃO ====================
+function showPage(pageId, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (pageId === 'library') renderLibrary();
+  if (pageId === 'reading') renderReading();
+  if (pageId === 'favorites') renderFavorites();
+}
+
+function renderLibrary() {
+  const term = (document.getElementById('lib-search').value || '').toLowerCase();
+  const filtered = booksData.filter(b => b.title.toLowerCase().includes(term));
+  const container = document.getElementById('lib-list');
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📚</div><h3>${booksData.length ? 'Nenhum resultado' : 'Biblioteca vazia'}</h3><p>${booksData.length ? 'Tente outra busca' : 'Toque em + para importar um PDF'}</p></div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(book => createBookCard(book)).join('');
+}
+
+function renderReading() {
+  const reading = booksData.filter(b => b.lastRead).sort((a, b) => new Date(b.lastRead) - new Date(a.lastRead));
+  const container = document.getElementById('reading-list');
+  if (!reading.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📖</div><h3>Nada por aqui</h3><p>Abra um livro para começar a ler</p></div>';
+    return;
+  }
+  container.innerHTML = reading.map(book => createBookCard(book)).join('');
+}
+
+function renderFavorites() {
+  const favs = booksData.filter(b => b.favorite);
+  const container = document.getElementById('favorites-list');
+  if (!favs.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">⭐</div><h3>Nenhum favorito</h3><p>Marque livros como favoritos</p></div>';
+    return;
+  }
+  container.innerHTML = favs.map(book => createBookCard(book)).join('');
+}
+
+function createBookCard(book) {
+  const progress = book.totalPages ? Math.round((book.lastPage / book.totalPages) * 100) : 0;
+  const lastReadStr = book.lastRead ? new Date(book.lastRead).toLocaleDateString('pt-BR') : 'Nunca lido';
+  return `
+    <div class="lib-card" onclick="openReader(${book.id})">
+      <div class="lib-card-head">
+        <span class="badge">📄 PDF</span>
+        <div class="card-actions">
+          <button class="btn-del" onclick="event.stopPropagation(); toggleFavorite(${book.id})">${book.favorite ? '⭐' : '☆'}</button>
+          <button class="btn-del" onclick="event.stopPropagation(); deleteBook(${book.id})">🗑️</button>
+        </div>
+      </div>
+      <div class="lib-card-title">${escapeHtml(book.title)}</div>
+      <div class="book-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+        <div class="book-meta">${progress}% concluído • ${book.totalPages || '?'} páginas • 📅 ${lastReadStr}</div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleFavorite(id) {
+  const book = booksData.find(b => b.id === id);
+  if (book) {
+    book.favorite = !book.favorite;
+    saveBooks();
+    renderLibrary(); renderReading(); renderFavorites();
+    showToast(book.favorite ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos');
+  }
+}
+
+function deleteBook(id) {
+  if (confirm('Excluir este livro permanentemente?')) {
+    booksData = booksData.filter(b => b.id !== id);
+    saveBooks();
+    renderLibrary(); renderReading(); renderFavorites();
+    if (currentBookId === id) closeReader();
+    showToast('📖 Livro excluído');
+  }
+}
+
+// ==================== IMPORTAÇÃO DE PDF ====================
+document.getElementById('fab-import').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+
+  for (const file of files) {
+    if (!file.type.includes('pdf')) {
+      showToast(`❌ ${file.name} não é um PDF`);
+      continue;
+    }
+
+    const estimatedMB = ((file.size * 1.37) / 1024 / 1024).toFixed(1);
+    if (file.size > 3 * 1024 * 1024) {
+      showToast(`⚠️ "${file.name}" é grande (~${estimatedMB}MB). Pode exceder o limite do navegador.`);
+    }
+
+    try {
+      showToast(`📥 Importando ${file.name}...`);
+      const reader = new FileReader();
+      const base64 = await new Promise((resolve, reject) => {
+        reader.onload = (ev) => resolve(ev.target.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      let title = file.name.replace('.pdf', '').replace(/[_\-]/g, ' ');
+      title = title.charAt(0).toUpperCase() + title.slice(1);
+
+      const newBook = {
+        id: Date.now() + Math.random(),
+        title: title,
+        data: base64,
+        lastPage: 1,
+        lastSentenceIndex: 0,
+        lastRead: null,
+        progress: 0,
+        totalPages: 0,
+        favorite: false,
+        added: new Date().toISOString()
+      };
+
+      booksData.push(newBook);
+      showToast(`✅ "${file.name}" importado!`);
+    } catch (err) {
+      console.error(err);
+      showToast(`❌ Erro ao importar ${file.name}`);
+    }
+  }
+
+  saveBooks();
+  renderLibrary(); renderReading(); renderFavorites();
+  e.target.value = '';
+});
+
+// ==================== ESTADO DO LEITOR ====================
+let currentPdf = null;
+let currentPage = 1;
+let currentBookId = null;
+let textPages = [];
+let isPlaying = false;
+let saveTimeout = null;
+let audioContext = null;
+let silentSource = null;
+let currentSentenceIndex = 0;
+let sentencesList = [];
+// Flag central da melhoria: indica que a leitura em voz alta deve
+// continuar automaticamente assim que a próxima página terminar de renderizar.
+let shouldResumeAfterPageChange = false;
+// Evita textos de páginas seguintes serem sobrepostos por chamadas concorrentes
+let pageRenderToken = 0;
+let speechToken = 0;
+
+// ==================== SALVAR/RESTAURAR ESTADO DO PLAYER (resiliente a reload) ====================
+function savePlayerState() {
+  if (currentBookId) {
+    const state = {
+      bookId: currentBookId,
+      page: currentPage,
+      sentenceIndex: currentSentenceIndex,
+      isPlaying: isPlaying,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(PLAYER_STATE_KEY, JSON.stringify(state));
+  }
+}
+
+function loadPlayerState() {
+  try {
+    const saved = localStorage.getItem(PLAYER_STATE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch (e) { return null; }
+}
+
+function clearPlayerState() {
+  localStorage.removeItem(PLAYER_STATE_KEY);
+}
+
+// Áudio silencioso para manter TTS ativo mesmo com tela bloqueada
+function startSilentAudio() {
+  if (audioContext) return;
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+    silentSource = audioContext.createBufferSource();
+    silentSource.buffer = buffer;
+    silentSource.loop = true;
+    silentSource.connect(audioContext.destination);
+    silentSource.start(0);
+  } catch (e) { console.warn('AudioContext:', e); }
+}
+
+function stopSilentAudio() {
+  try {
+    if (silentSource) { silentSource.stop(); silentSource.disconnect(); silentSource = null; }
+    if (audioContext) { audioContext.close(); audioContext = null; }
+  } catch (e) {}
+}
+
+// MediaSession — controles na tela bloqueada, incluindo avançar/voltar página
+function setupMediaSession(title) {
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: title || 'Leitura',
+    artist: 'ReadEra Pro',
+    album: 'Audiobook'
+  });
+  navigator.mediaSession.setActionHandler('play', () => { if (!isPlaying) toggleTTS(); });
+  navigator.mediaSession.setActionHandler('pause', () => { if (isPlaying) toggleTTS(); });
+  navigator.mediaSession.setActionHandler('nexttrack', () => changePageDelta(1));
+  navigator.mediaSession.setActionHandler('previoustrack', () => changePageDelta(-1));
+}
+
+// O acompanhamento automático é feito pelo destaque da frase via scrollIntoView().
+// Mantemos stubs para compatibilidade com chamadas antigas.
+function startAutoScroll() {}
+function stopAutoScroll() {}
+function toggleAutoScroll() {}
+
+function updateReadingProgress() {
+  const container = document.getElementById('scroll-container');
+  if (!container) return;
+  const scrollable = container.scrollHeight - container.clientHeight;
+  if (scrollable > 0) {
+    const percent = (container.scrollTop / scrollable) * 100;
+    document.getElementById('reading-progress-fill').style.width = `${Math.min(100, Math.max(0, percent))}%`;
+  } else {
+    document.getElementById('reading-progress-fill').style.width = '100%';
+  }
+}
+
+// ==================== TTS COM FRASES COMPLETAS ====================
+function getSentencesFromPage() {
+  const content = textPages[currentPage - 1] || '';
+  let sentences = content.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú"'\d])/);
+  if (sentences.length <= 1) {
+    sentences = content.split(/(?<=[.!?])\s+/);
+  }
+  sentences = sentences.filter(s => s.trim().length > 5);
+  return sentences;
+}
+
+function highlightSentence(index) {
+  const content = document.getElementById('page-content');
+  if (!content) return;
+
+  const sentences = getSentencesFromPage();
+  if (index >= sentences.length) return;
+
+  clearHighlights();
+
+  const targetSentence = sentences[index].trim();
+  const paragraphs = content.querySelectorAll('p');
+
+  for (const p of paragraphs) {
+    const text = p.textContent;
+    const pos = text.indexOf(targetSentence);
+    if (pos === -1) continue;
+
+    const textNode = p.firstChild;
+    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) continue;
+
+    const before = text.slice(0, pos);
+    const after = text.slice(pos + targetSentence.length);
+
+    const span = document.createElement('span');
+    span.className = 'current-highlight';
+    span.textContent = targetSentence;
+
+    p.textContent = '';
+    if (before) p.appendChild(document.createTextNode(before));
+    p.appendChild(span);
+    if (after) p.appendChild(document.createTextNode(after));
+
+    span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    break;
+  }
+}
+
+function clearHighlights() {
+  const content = document.getElementById('page-content');
+  if (!content) return;
+  content.querySelectorAll('.current-highlight').forEach(span => {
+    span.replaceWith(document.createTextNode(span.textContent));
+  });
+  content.normalize();
+}
+
+function toggleTTS() {
+  if (isPlaying) {
+    window.speechSynthesis.cancel();
+    isPlaying = false;
+    document.getElementById('btn-play-pause').textContent = '▶';
+    stopSilentAudio();
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    shouldResumeAfterPageChange = false;
+    savePlayerState();
+  } else {
+    startTTS();
+  }
+}
+
+function startTTS() {
+  speechToken++;
+  sentencesList = getSentencesFromPage();
+  if (!sentencesList.length) {
+    showToast('Nenhum texto disponível nesta página');
+    return;
+  }
+  isPlaying = true;
+  document.getElementById('btn-play-pause').textContent = '⏸';
+  startSilentAudio();
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  // startTTS() preserva o índice restaurado quando ele foi definido antes da abertura.
+  if (!Number.isInteger(currentSentenceIndex) || currentSentenceIndex < 0 || currentSentenceIndex >= sentencesList.length) {
+    currentSentenceIndex = 0;
+  }
+  speakCurrentSentence();
+  savePlayerState();
+}
+
+// ===== MELHORIA PRINCIPAL: continuidade automática entre páginas =====
+// Quando a última frase de uma página termina, se ainda houver páginas,
+// a flag shouldResumeAfterPageChange é ligada e a página muda sozinha;
+// renderCurrentPage() detecta a flag e retoma a leitura na nova página
+// sem que o usuário precise apertar play novamente.
+function speakCurrentSentence() {
+  if (!isPlaying) return;
+  const mySpeechToken = speechToken;
+
+  if (currentSentenceIndex >= sentencesList.length) {
+    // O watchdog nunca avança página. A troca ocorre apenas no onend da última frase.
+    return;
+  }
+
+  const sentence = sentencesList[currentSentenceIndex];
+  if (!sentence || sentence.trim().length < 3) {
+    currentSentenceIndex++;
+    setTimeout(() => speakCurrentSentence(), 0);
+    return;
+  }
+
+  clearHighlights();
+  highlightSentence(currentSentenceIndex);
+  updateParagraphInfo();
+  savePlayerState();
+
+  const utterance = new SpeechSynthesisUtterance(sentence);
+  utterance.lang = 'pt-BR';
+  const ttsSpeed = document.getElementById('tts-speed');
+  utterance.rate = ttsSpeed ? parseFloat(ttsSpeed.value) : 0.85;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  utterance.onend = () => {
+    if (!isPlaying || mySpeechToken !== speechToken) return;
+    currentSentenceIndex++;
+    savePlayerState();
+    if (currentSentenceIndex < sentencesList.length) {
+      setTimeout(() => {
+        if (isPlaying && mySpeechToken === speechToken) speakCurrentSentence();
+      }, 100);
+    } else if (currentPdf && currentPage < currentPdf.numPages) {
+      shouldResumeAfterPageChange = true;
+      showTransitionHint('📖 Avançando para a próxima página...');
+      changePageDelta(1, true);
+    } else {
+      isPlaying = false;
+      document.getElementById('btn-play-pause').textContent = '▶';
+      stopSilentAudio();
+      clearPlayerState();
+      showToast('📖 Leitura concluída!');
+    }
+  };
+
+  utterance.onerror = () => {
+    if (!isPlaying || mySpeechToken !== speechToken) return;
+    savePlayerState();
+    setTimeout(() => {
+      if (isPlaying && mySpeechToken === speechToken) speakCurrentSentence();
+    }, 250);
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function showTransitionHint(msg) {
+  const hint = document.getElementById('page-transition-hint');
+  if (!hint) return;
+  hint.textContent = msg;
+  hint.style.display = 'block';
+  clearTimeout(hint._hideTimeout);
+  hint._hideTimeout = setTimeout(() => { hint.style.display = 'none'; }, 2000);
+}
+
+// Watchdog conservador: recupera a mesma frase apenas se o TTS parou inesperadamente.
+// Nunca avança página por conta própria.
+setInterval(() => {
+  if (!isPlaying || !sentencesList.length) return;
+  // Recupera somente a frase atual; jamais avança página pelo watchdog.
+  if (!window.speechSynthesis.speaking && !window.speechSynthesis.paused && currentSentenceIndex < sentencesList.length) {
+    speakCurrentSentence();
+  }
+}, 5000);
+
+// Retoma a fala se o navegador pausou o speechSynthesis ao trocar de aba/bloquear tela
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (isPlaying && !window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+      speakCurrentSentence();
+    }
+    if (audioContext?.state === 'suspended') audioContext.resume();
+  }
+});
+
+// ==================== FUNÇÕES DO LEITOR ====================
+async function openReader(bookId, autoPlay = false, resumeSentenceIndex = null) {
+  const book = booksData.find(b => b.id === bookId);
+  if (!book) {
+    showToast('Livro não encontrado');
+    return;
+  }
+
+  stopAutoScroll();
+  if (isPlaying) {
+    window.speechSynthesis.cancel();
+    isPlaying = false;
+    document.getElementById('btn-play-pause').textContent = '▶';
+    shouldResumeAfterPageChange = false;
+  }
+
+  document.getElementById('reader-view').style.display = 'flex';
+  document.getElementById('current-book-title').textContent = book.title;
+  currentBookId = bookId;
+  currentSentenceIndex = Number.isInteger(resumeSentenceIndex) && resumeSentenceIndex >= 0 ? resumeSentenceIndex : (Number.isInteger(book.lastSentenceIndex) ? book.lastSentenceIndex : 0);
+
+  try {
+    showToast('📖 Carregando livro...');
+    const arrayBuffer = Uint8Array.from(atob(book.data), c => c.charCodeAt(0)).buffer;
+    currentPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    currentPage = book.lastPage || 1;
+
+    textPages = new Array(currentPdf.numPages).fill(null);
+
+    if (book.totalPages !== currentPdf.numPages) {
+      book.totalPages = currentPdf.numPages;
+      saveBooks();
+    }
+
+    await renderCurrentPage();
+    setupMediaSession(book.title);
+
+    if (autoPlay) {
+      setTimeout(() => startTTS(), 500);
+    }
+
+    showToast('📖 Livro carregado');
+    savePlayerState();
+  } catch (error) {
+    console.error(error);
+    showToast('Erro ao carregar o PDF');
+    closeReader();
+  }
+}
+
+function closeReader() {
+  stopAutoScroll();
+  if (isPlaying) {
+    window.speechSynthesis.cancel();
+    isPlaying = false;
+    document.getElementById('btn-play-pause').textContent = '▶';
+    stopSilentAudio();
+    shouldResumeAfterPageChange = false;
+  }
+  if (currentPdf) {
+    currentPdf.destroy();
+    currentPdf = null;
+  }
+  document.getElementById('reader-view').style.display = 'none';
+  saveProgressImmediately();
+  clearPlayerState();
+}
+
+async function renderCurrentPage() {
+  const myToken = ++pageRenderToken;
+
+  if (textPages[currentPage - 1] === null) {
+    try {
+      const page = await currentPdf.getPage(currentPage);
+      const textContent = await page.getTextContent();
+      // Se outra renderização começou enquanto esperávamos (troca rápida de página), descarta
+      if (myToken !== pageRenderToken) return;
+      textPages[currentPage - 1] = textContent.items.map(item => item.str).join(' ');
+    } catch (e) {
+      console.error('Erro ao extrair texto da página', currentPage, e);
+      textPages[currentPage - 1] = '';
+    }
+  }
+
+  if (myToken !== pageRenderToken) return;
+
+  const content = textPages[currentPage - 1] || '';
+  const formatted = formatTextAsParagraphs(content);
+  document.getElementById('page-content').innerHTML = formatted;
+  document.getElementById('page-info').textContent = `${currentPage} / ${currentPdf.numPages}`;
+  document.getElementById('page-input').value = currentPage;
+  document.getElementById('page-input').max = currentPdf.numPages;
+
+  document.getElementById('scroll-container').scrollTop = 0;
+  updateReadingProgress();
+  saveProgress();
+
+  sentencesList = getSentencesFromPage();
+  if (!shouldResumeAfterPageChange) {
+    currentSentenceIndex = Math.min(Math.max(currentSentenceIndex, 0), Math.max(0, sentencesList.length - 1));
+  }
+
+  // ===== Continuidade de leitura entre páginas =====
+  // Se a página vazia (sem texto extraível), pula automaticamente para a próxima
+  // em vez de travar a leitura em silêncio.
+  if (shouldResumeAfterPageChange && !sentencesList.length && currentPdf && currentPage < currentPdf.numPages) {
+    changePageDelta(1, true);
+    return;
+  }
+
+  if (shouldResumeAfterPageChange) {
+    shouldResumeAfterPageChange = false;
+    currentSentenceIndex = Math.min(Math.max(currentSentenceIndex, 0), Math.max(0, sentencesList.length - 1));
+    setTimeout(() => {
+      if (myToken === pageRenderToken) startTTS();
+    }, 500);
+  }
+
+  updateParagraphInfo();
+
+  // Pré-carrega o texto da próxima página em segundo plano (leitura mais fluida)
+  if (currentPage < currentPdf.numPages && textPages[currentPage] === null) {
+    currentPdf.getPage(currentPage + 1).then(page =>
+      page.getTextContent().then(tc => {
+        textPages[currentPage] = tc.items.map(i => i.str).join(' ');
+      })
+    ).catch(() => {});
+  }
+
+  savePlayerState();
+}
+
+function formatTextAsParagraphs(text) {
+  let paragraphs = text.split(/\n\s*\n/);
+  if (paragraphs.length <= 1) {
+    paragraphs = text.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú])/);
+  }
+  return paragraphs.map(p => `<p>${escapeHtml(p.trim())}</p>`).join('');
+}
+
+function changePageDelta(delta, fromTTS = false) {
+  if (!currentPdf) return;
+  const newPage = currentPage + delta;
+  if (newPage >= 1 && newPage <= currentPdf.numPages) {
+    const wasPlaying = isPlaying;
+    window.speechSynthesis.cancel();
+    speechToken++;
+    if (wasPlaying && !fromTTS) {
+      isPlaying = false;
+      document.getElementById('btn-play-pause').textContent = '▶';
+      stopSilentAudio();
+    }
+    shouldResumeAfterPageChange = fromTTS && wasPlaying;
+    currentPage = newPage;
+    currentSentenceIndex = 0;
+    renderCurrentPage();
+  } else if (newPage > currentPdf.numPages) {
+    showToast('📖 Você chegou à última página');
+  } else {
+    showToast('Você está na primeira página');
+  }
+}
+
+function updateParagraphInfo() {
+  const el = document.getElementById('paragraph-info');
+  if (!el) return;
+  const total = getSentencesFromPage().length;
+  const current = total ? Math.min(currentSentenceIndex + 1, total) : 0;
+  el.textContent = `¶ ${current} / ${total}`;
+}
+
+function changeSentenceDelta(delta) {
+  if (!currentPdf) return;
+  const sentences = getSentencesFromPage();
+  if (!sentences.length) return;
+  const target = currentSentenceIndex + delta;
+  if (target >= 0 && target < sentences.length) {
+    currentSentenceIndex = target;
+    sentencesList = sentences;
+    updateParagraphInfo();
+    savePlayerState();
+    if (isPlaying) {
+      speechToken++;
+      window.speechSynthesis.cancel();
+      setTimeout(() => { if (isPlaying) speakCurrentSentence(); }, 50);
+    } else {
+      highlightSentence(currentSentenceIndex);
+    }
+    return;
+  }
+  if (delta > 0 && currentPage < currentPdf.numPages) {
+    const wasPlaying = isPlaying;
+    window.speechSynthesis.cancel(); speechToken++;
+    if (wasPlaying) { isPlaying=false; document.getElementById('btn-play-pause').textContent='▶'; stopSilentAudio(); }
+    currentPage++; currentSentenceIndex=0; shouldResumeAfterPageChange=false; renderCurrentPage();
+  } else if (delta < 0 && currentPage > 1) {
+    const wasPlaying = isPlaying;
+    window.speechSynthesis.cancel(); speechToken++;
+    if (wasPlaying) { isPlaying=false; document.getElementById('btn-play-pause').textContent='▶'; stopSilentAudio(); }
+    currentPage--; shouldResumeAfterPageChange=false;
+    renderCurrentPage().then(() => {
+      const prevSentences = getSentencesFromPage();
+      currentSentenceIndex = Math.max(0, prevSentences.length - 1);
+      sentencesList = prevSentences;
+      updateParagraphInfo();
+      highlightSentence(currentSentenceIndex);
+      savePlayerState();
+    });
+  }
+}
+
+document.getElementById('page-input').addEventListener('change', (e) => {
+  if (!currentPdf) return;
+  const page = parseInt(e.target.value);
+  if (page >= 1 && page <= currentPdf.numPages) {
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      speechToken++;
+      isPlaying = false;
+      document.getElementById('btn-play-pause').textContent = '▶';
+      stopSilentAudio();
+    }
+    shouldResumeAfterPageChange = false;
+    currentPage = page;
+    renderCurrentPage();
+  } else {
+    e.target.value = currentPage;
+  }
+});
+
+function saveProgress() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (currentBookId && currentPdf) {
+      const book = booksData.find(b => b.id === currentBookId);
+      if (book) {
+        book.lastPage = currentPage;
+        book.lastSentenceIndex = currentSentenceIndex;
+        book.lastRead = new Date().toISOString();
+        book.progress = Math.round((currentPage / currentPdf.numPages) * 100);
+        book.totalPages = currentPdf.numPages;
+        saveBooks();
+        renderLibrary(); renderReading(); renderFavorites();
+      }
+    }
+  }, 1000);
+}
+
+function saveProgressImmediately() {
+  if (currentBookId && currentPdf) {
+    const book = booksData.find(b => b.id === currentBookId);
+    if (book) {
+      book.lastPage = currentPage;
+      book.lastSentenceIndex = currentSentenceIndex;
+      book.lastRead = new Date().toISOString();
+      book.progress = Math.round((currentPage / currentPdf.numPages) * 100);
+      saveBooks();
+    }
+  }
+}
+
+// ==================== RESTAURAR LEITURA APÓS RECARREGAR A PÁGINA DO NAVEGADOR ====================
+async function restorePlayerState() {
+  const state = loadPlayerState();
+  if (state && state.bookId) {
+    const bookExists = booksData.find(b => b.id === state.bookId);
+    if (bookExists) {
+      console.log('🔄 Restaurando leitura do livro:', state.bookId, 'página:', state.page);
+      bookExists.lastPage = state.page || bookExists.lastPage;
+      await openReader(state.bookId, state.isPlaying, Number.isInteger(state.sentenceIndex) ? state.sentenceIndex : 0);
+    } else {
+      clearPlayerState();
+    }
+  }
+}
+
+// Event listeners
+document.getElementById('scroll-container').addEventListener('scroll', updateReadingProgress);
+document.getElementById('btn-play-pause').addEventListener('click', toggleTTS);
+document.getElementById('lib-search').addEventListener('input', renderLibrary);
+
+// Slider TTS
+const ttsSpeedSlider = document.getElementById('tts-speed');
+const ttsSpeedValue = document.getElementById('tts-speed-value');
+ttsSpeedSlider.addEventListener('input', () => {
+  ttsSpeedValue.textContent = `${parseFloat(ttsSpeedSlider.value).toFixed(1)}×`;
+});
+
+// Salva o estado (inclusive isPlaying) antes de a aba ser fechada/recarregada,
+// para que a leitura em voz alta possa ser retomada exatamente de onde parou.
+window.addEventListener('beforeunload', () => {
+  if (currentBookId) savePlayerState();
+});
+
+// ==================== INIT ====================
+loadBooks();
+renderLibrary();
+renderReading();
+renderFavorites();
+
+// Restaura o estado do player (livro + página + se estava tocando) após reload
+setTimeout(() => { restorePlayerState(); }, 500);
+
+console.log('✅ App iniciado com', booksData.length, 'livros');
+</script>
+</body>
+</html>
