@@ -6,17 +6,18 @@ Leitor de livros **PDF e EPUB** que roda direto no navegador, em um único arqui
 
 | Arquivo | Para que serve |
 |---|---|
-| `livrouve.html` | O aplicativo completo (HTML + CSS + JS) |
+| `index.html` | O aplicativo completo (HTML + CSS + JS) |
 | `ícone-cineário-32.png` | Favicon 32×32 |
 | `ícone-cineário-48.png` | Favicon 48×48 |
 | `ícone-cineário-180.png` | Ícone para tela inicial do iPhone/iPad (apple-touch-icon) |
+| `sw.js` | Service Worker para funcionamento offline |
 | `README.md` | Este arquivo |
 
 Mantenha os ícones **na mesma pasta** do HTML; ele os referencia por caminho relativo.
 
 ## Como usar
 
-1. Abra `livrouve.html` no navegador (duplo clique, ou hospede em qualquer site estático).
+1. Abra `index.html` no navegador (duplo clique, ou hospede em qualquer site estático).
 2. Toque no botão **+** e escolha um ou mais arquivos `.pdf` ou `.epub`.
 3. Toque no livro para abrir o leitor.
 4. Toque em **▶** para ouvir. A leitura segue de página em página sozinha e o progresso é salvo.
