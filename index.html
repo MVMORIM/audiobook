@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ReadEra Pro — Leitor & Audiobook</title>
+<title>Livrouve — Leitor & Audiobook</title>
 <meta name="theme-color" content="#c17b4a">
 <link rel="icon" type="image/png" sizes="32x32" href="%C3%ADcone-cin%C3%A1rio-32.png">
 <link rel="icon" type="image/png" sizes="48x48" href="%C3%ADcone-cin%C3%A1rio-48.png">
@@ -1074,7 +1074,7 @@ body.on-backup #fabBookImport{display:none}
 <body>
 
 <div class="topbar">
-  <div class="topbar-logo">Read<span>Era</span> Pro</div>
+  <div class="topbar-logo">Livrouve</div>
   <nav class="topbar-nav">
     <button class="nav-tab active" onclick="showPage('library',this)">📚 Biblioteca</button>
     <button class="nav-tab" onclick="showPage('reading',this)">📖 Lendo Agora</button>
@@ -2752,7 +2752,7 @@ body.on-backup #fabBookImport{display:none}
         const b = booksData.find(x => x.id === bCurrentBookId);
         if (b && typeof MediaMetadata !== 'undefined') {
           navigator.mediaSession.metadata = new MediaMetadata({
-            title: b.title, artist: 'ReadEra Pro', album: 'Livro'
+            title: b.title, artist: 'Livrouve', album: 'Livro'
           });
         }
         navigator.mediaSession.setActionHandler('play', () => { if (!bIsPlaying) startBTTS(); });
@@ -2964,8 +2964,8 @@ body.on-backup #fabBookImport{display:none}
 
   window.addEventListener('beforeunload', () => { if (bCurrentBookId) saveBPlayerState(); });
 
-  const BOOKS_BACKUP_APP = 'ReadEra Pro';
-  const BOOKS_BACKUP_TIPO = 'Livros do ReadEra Pro';
+  const BOOKS_BACKUP_APP = 'Livrouve';
+  const BOOKS_BACKUP_TIPO = 'Livros do Livrouve';
   const BOOKS_BACKUP_VERSION = '1.0';
 
   function exportBooksBackup() {
@@ -3000,7 +3000,7 @@ body.on-backup #fabBookImport{display:none}
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ReadEra_Livros_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `Livrouve_Livros_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

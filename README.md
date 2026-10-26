@@ -1,14 +1,12 @@
-# ReadEra Pro — Leitor & Audiobook
+# Livrouve — Leitor & Audiobook
 
 Leitor de livros **PDF e EPUB** que roda direto no navegador, em um único arquivo HTML, com **narração por voz sintetizada** (audiobook), marcadores, destaques e anotações. Não precisa de servidor nem de conta: tudo fica salvo no seu dispositivo.
-
-> O nome é provisório. Veja as sugestões de renomeação na seção [Renomear o projeto](#renomear-o-projeto).
 
 ## Arquivos
 
 | Arquivo | Para que serve |
 |---|---|
-| `readera-pro.html` | O aplicativo completo (HTML + CSS + JS) |
+| `livrouve.html` | O aplicativo completo (HTML + CSS + JS) |
 | `ícone-cineário-32.png` | Favicon 32×32 |
 | `ícone-cineário-48.png` | Favicon 48×48 |
 | `ícone-cineário-180.png` | Ícone para tela inicial do iPhone/iPad (apple-touch-icon) |
@@ -18,7 +16,7 @@ Mantenha os ícones **na mesma pasta** do HTML; ele os referencia por caminho re
 
 ## Como usar
 
-1. Abra `readera-pro.html` no navegador (duplo clique, ou hospede em qualquer site estático).
+1. Abra `livrouve.html` no navegador (duplo clique, ou hospede em qualquer site estático).
 2. Toque no botão **+** e escolha um ou mais arquivos `.pdf` ou `.epub`.
 3. Toque no livro para abrir o leitor.
 4. Toque em **▶** para ouvir. A leitura segue de página em página sozinha e o progresso é salvo.
@@ -83,29 +81,17 @@ Se você usava a versão antiga (livros em base64 no `localStorage`, chave `read
 
 Testado em Chromium. Deve funcionar nos navegadores atuais que suportam `IndexedDB`, `SpeechSynthesis` e `Cache Storage` (Chrome, Edge, Safari, Firefox). Os controles de tela bloqueada dependem da `Media Session API`.
 
-## Renomear o projeto
+## Sobre o nome
 
-O nome aparece em poucos lugares:
+**Livrouve** vem de *livro* + *ouve*: um livro que você ouve. Se um dia quiser trocar, o nome aparece em três lugares:
 
 1. `<title>` no HTML
 2. Texto do logotipo na barra superior (`.topbar-logo`)
 3. Metadados de mídia (`artist`) e nome do arquivo de backup, no script
 
-Os ícones não contêm texto, então servem para qualquer nome. Se renomear, ajuste também os nomes dos arquivos `ícone-cineário-*.png` e as três linhas `<link rel="icon">` / `apple-touch-icon` no `<head>`.
+Os ícones não contêm texto. Os arquivos ainda se chamam `ícone-cineário-*.png`; se renomeá-los, ajuste as três linhas `<link rel="icon">` / `apple-touch-icon` no `<head>`.
 
-### Sugestões de nome
-
-O nome atual, *ReadEra*, é o mesmo de um aplicativo de leitura já existente; trocar evita confusão. Opções:
-
-- **Leitário**: na linha de *Cineário* (cine + ário), curto e fácil de falar. Minha sugestão.
-- **Ouvilivro**: ouvir + livro, deixa claro que é audiobook.
-- **Folheio**: lembra folhear páginas; soa como marca.
-- **Narrário**: narrar + ário, foca na voz.
-- **Páginas em Voz**: descritivo, bom para loja ou site.
-- **Lerouvir**: junta ler e ouvir, mostra os dois modos.
-- **Voz & Prosa**: elegante, com tom literário.
-
-Antes de adotar um nome, vale pesquisar se já existe app ou marca com ele e se o domínio está livre.
+> Os nomes internos de armazenamento (`readera_books_v3`, `readeraBooksDB`) continuam com o prefixo antigo de propósito: mudá-los faria o app deixar de enxergar livros já importados.
 
 ## Tecnologias
 
