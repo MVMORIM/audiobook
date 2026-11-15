@@ -178,6 +178,25 @@ body {
 .progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s; }
 .book-meta { margin-top: 8px; font-size: 0.7rem; color: var(--text-soft); }
 
+/* ===== PAINEL (DASHBOARD) ===== */
+.dash-hero { background: var(--primary-gradient); color: #fff; border-radius: var(--radius-md); padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px; box-shadow: var(--shadow-primary); }
+.dash-hero .n { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+.dash-hero .l { font-size: .72rem; opacity: .9; margin-top: 3px; }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; }
+.dash-card h3 { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-soft); font-weight: 700; margin-bottom: 10px; }
+.dash-card .big { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
+.dash-goal { display: flex; align-items: center; gap: 14px; }
+.dash-ring { width: 84px; height: 84px; flex-shrink: 0; }
+.dash-goal-input { width: 64px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: .85rem; margin-top: 6px; }
+.dash-goal-txt { font-size: .75rem; color: var(--text-soft); }
+.dash-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; }
+.dash-section h3 { font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-soft); font-weight: 700; margin-bottom: 14px; }
+.dash-book { margin-bottom: 12px; }
+.dash-book-top { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 6px; gap: 8px; }
+.dash-book-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-empty { color: var(--text-soft); font-size: .85rem; padding: 8px 0; }
+
 /* EMPTY STATE */
 .empty { text-align: center; padding: 60px 20px; color: var(--text-soft); }
 .empty-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
@@ -1217,6 +1236,7 @@ body.on-backup #fabBookImport{display:none}
     <button class="nav-tab active" onclick="showPage('library',this)">📚 Biblioteca</button>
     <button class="nav-tab" onclick="showPage('reading',this)">📖 Lendo Agora</button>
     <button class="nav-tab" onclick="showPage('favorites',this)">⭐ Favoritos</button>
+    <button class="nav-tab" onclick="showPage('dashboard',this)">📊 Painel</button>
     <button class="nav-tab" onclick="showPage('backup',this)">💾 Backup</button>
     <button class="dark-toggle" onclick="toggleDarkMode()">🌙</button>
   </nav>
@@ -1230,6 +1250,10 @@ body.on-backup #fabBookImport{display:none}
   </div>
   <div class="books-grid" id="booksGrid"></div>
   <div class="empty hidden" id="emptyBooksMsg"><div class="empty-icon">📚</div><h3>Nada por aqui</h3><p>Toque em + para importar um PDF ou EPUB</p></div>
+</div></div>
+<div id="page-dashboard" class="page"><div class="inner">
+  <div class="page-hdr"><div class="page-title">Painel<small>Resumo da sua leitura</small></div></div>
+  <div id="dashContent"></div>
 </div></div>
 <div id="page-backup" class="page"><div class="inner">
   <div class="page-hdr"><div class="page-title">Backup<small>Progresso, marcadores e capas</small></div></div>
@@ -1433,9 +1457,9 @@ body.on-backup #fabBookImport{display:none}
   window.showPage=function(id,btn){
     document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));btn&&btn.classList.add('active');
     const backup=id==='backup';document.body.classList.toggle('on-backup',backup);
-    document.getElementById('page-library').classList.toggle('active',!backup);
+    const dash=id==='dashboard';document.getElementById('page-dashboard').classList.toggle('active',dash);if(dash)window.renderDashboard&&window.renderDashboard();document.getElementById('page-library').classList.toggle('active',!backup&&!dash);
     document.getElementById('page-backup').classList.toggle('active',backup);
-    if(!backup){const f={library:'todos',reading:'lendo',favorites:'favoritos'}[id]||'todos';
+    if(!backup&&!dash){const f={library:'todos',reading:'lendo',favorites:'favoritos'}[id]||'todos';
       document.querySelector('[data-bfilter="'+f+'"]').click();
       document.getElementById('libTitle').innerHTML={todos:'Biblioteca<small>Seus livros importados (PDF/EPUB)</small>',lendo:'Lendo Agora<small>Continue de onde parou</small>',favoritos:'Favoritos<small>Seus livros preferidos</small>'}[f];}
   };
@@ -3226,6 +3250,96 @@ body.on-backup #fabBookImport{display:none}
   applyRdSettings();
 
   window.addEventListener('beforeunload', () => { if (bCurrentBookId) saveBPlayerState(); });
+
+  const DASH_GOAL_KEY = 'livrouve_meta_livros';
+  function getDashGoal() {
+    const v = parseInt(localStorage.getItem(DASH_GOAL_KEY), 10);
+    return v > 0 ? v : 20;
+  }
+  function escDash(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  function renderDashboard() {
+    const root = $('dashContent');
+    if (!root) return;
+
+    if (!booksData.length) {
+      root.innerHTML = '<div class="dash-section"><div class="dash-empty">Importe um livro na Biblioteca para ver seu painel aqui.</div></div>';
+      return;
+    }
+
+    const total  = booksData.length;
+    const lidos  = booksData.filter(b => b.progress >= 100);
+    const lendo  = booksData.filter(b => b.lastRead && b.progress > 0 && b.progress < 100);
+    const favs   = booksData.filter(b => b.favorite).length;
+    const marcas = booksData.reduce((s, b) => s + ((b.marks || []).length), 0);
+    const media  = Math.round(booksData.reduce((s, b) => s + (b.progress || 0), 0) / total);
+
+    const meta = getDashGoal();
+    const pct  = Math.min(1, lidos.length / meta);
+    const C    = 2 * Math.PI * 38;
+    const emAndamento = [...lendo]
+      .sort((a, b) => new Date(b.lastRead) - new Date(a.lastRead))
+      .slice(0, 6);
+
+    const barras = emAndamento.map(b => `
+      <div class="dash-book">
+        <div class="dash-book-top"><span>${escDash(b.title)}</span><span>${b.progress}%</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${b.progress}%"></div></div>
+      </div>`).join('') || '<div class="dash-empty">Nenhum livro em andamento.</div>';
+
+    root.innerHTML = `
+      <div class="dash-hero">
+        <div><div class="n">${total}</div><div class="l">livros na biblioteca</div></div>
+        <div><div class="n">${lidos.length}</div><div class="l">livros lidos</div></div>
+        <div><div class="n">${lendo.length}</div><div class="l">lendo agora</div></div>
+        <div><div class="n">${favs}</div><div class="l">favoritos</div></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="dash-card">
+          <h3>Meta do ano</h3>
+          <div class="dash-goal">
+            <svg class="dash-ring" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--primary-light)" stroke-width="9"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--primary)" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"
+                transform="rotate(-90 50 50)"/>
+              <text x="50" y="57" text-anchor="middle" font-size="20" font-weight="800" fill="var(--text)">${lidos.length}</text>
+            </svg>
+            <div>
+              <div class="dash-goal-txt">${lidos.length} de ${meta} livros</div>
+              <label class="dash-goal-txt">Meta: <input type="number" min="1" id="dashGoalInput" class="dash-goal-input" value="${meta}"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <h3>Progresso médio</h3>
+          <div class="big">${media}%</div>
+          <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" style="width:${media}%"></div></div>
+        </div>
+
+        <div class="dash-card">
+          <h3>Marcações</h3>
+          <div class="big">${marcas}</div>
+          <div class="dash-goal-txt" style="margin-top:6px">marcas e destaques salvos</div>
+        </div>
+      </div>
+
+      <div class="dash-section">
+        <h3>Em andamento</h3>
+        ${barras}
+      </div>`;
+
+    $('dashGoalInput')?.addEventListener('change', e => {
+      const v = parseInt(e.target.value, 10);
+      if (v > 0) localStorage.setItem(DASH_GOAL_KEY, v);
+      renderDashboard();
+    });
+  }
+  window.renderDashboard = renderDashboard;
 
   const BOOKS_BACKUP_APP = 'Livrouve';
   const BOOKS_BACKUP_TIPO = 'Livros do Livrouve';
